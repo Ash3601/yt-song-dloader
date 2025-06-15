@@ -40,7 +40,7 @@
     <h2>📊 Top 10 Searches</h2>
     <div class="section">
         <ul>
-            {% for term, count in searches %}
+            {% for term, count in top_searches %}
             <li>{{ term }} — {{ count }} searches</li>
             {% endfor %}
         </ul>
@@ -49,7 +49,7 @@
     <h2>🎧 Top 10 Downloads</h2>
     <div class="section">
         <ul>
-            {% for video_id, count in downloads %}
+            {% for video_id, count in top_downloads %}
             <li><a href="https://www.youtube.com/watch?v={{ video_id }}" target="_blank">{{ video_id }}</a> — {{ count }} downloads</li>
             {% endfor %}
         </ul>
