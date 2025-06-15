@@ -4,7 +4,9 @@ import yt_dlp
 import os
 import tempfile
 import redis
-from analytics import log_search, log_download, get_top_searches, get_top_downloads
+
+# Use SQLite-based analytics now
+from analyticsdb import log_search, log_download, get_top_searches, get_top_downloads
 from user_session import get_or_create_user_id, mark_downloaded, has_downloaded
 
 app = Flask(__name__)
