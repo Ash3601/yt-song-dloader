@@ -31,9 +31,13 @@
             align-items: center;
         }
         .result-title {
-            max-width: 75%;
+            max-width: 60%;
         }
-        button.download-btn {
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        button.download-btn, .downloaded-btn, .stream-btn {
             background-color: #00ffcc;
             color: #121212;
             padding: 10px 16px;
@@ -43,8 +47,12 @@
             border: none;
             cursor: pointer;
         }
-        button.download-btn:hover {
+        button.download-btn:hover, .stream-btn:hover {
             background-color: #00ddaa;
+        }
+        .downloaded-btn {
+            background-color: #555;
+            cursor: not-allowed;
         }
         a.back-link {
             display: inline-block;
@@ -74,7 +82,14 @@
         {% for result in results %}
         <div class="result-card">
             <div class="result-title">{{ result.title }}</div>
-            <button class="download-btn" onclick="triggerDownload('{{ result.url }}')">Download</button>
+            <div class="btn-group">
+                <a class="stream-btn" href="{{ result.url }}" target="_blank">🎥 Watch</a>
+                {% if result.downloaded %}
+                    <button class="downloaded-btn" disabled>Downloaded</button>
+                {% else %}
+                    <button class="download-btn" onclick="triggerDownload('{{ result.url }}')">Download</button>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -99,14 +114,12 @@
             document.body.appendChild(form);
             document.getElementById("loading").style.display = "block";
 
-            // Trick: submit to hidden iframe to keep page alive
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             document.body.appendChild(iframe);
             iframe.contentWindow.document.body.appendChild(form);
             form.submit();
 
-            // Hide loader after 15 seconds (fallback)
             setTimeout(() => document.getElementById("loading").style.display = "none", 15000);
         }
     </script>
