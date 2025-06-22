@@ -87,12 +87,29 @@
       <div class="result-title">{{ result.title }}</div>
       <div class="btn-group">
         <a class="stream-btn" href="{{ result.url }}" target="_blank">🎥 Watch</a>
+        <!-- Approach for localstorage much accurate -->
         <button class="download-btn"
                 id="btn-{{ result.video_id }}"
                 data-video-id="{{ result.video_id }}"
                 onclick="triggerDownload('{{ result.url }}', '{{ result.video_id }}')">
           Download
         </button>
+        <!-- If we want to use redis -->
+        <!-- {% if result.downloaded %}
+            <button class="downloaded-btn"
+                    id="btn-{{ result.video_id }}"
+                    data-video-id="{{ result.video_id }}"
+                    disabled>
+                Downloaded
+            </button>
+        {% else %}
+            <button class="download-btn"
+                    id="btn-{{ result.video_id }}"
+                    data-video-id="{{ result.video_id }}"
+                    onclick="triggerDownload('{{ result.url }}', '{{ result.video_id }}')">
+                Download
+            </button>
+        {% endif %}         -->
       </div>
     </div>
     {% endfor %}

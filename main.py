@@ -73,8 +73,8 @@ def search_youtube(query: str, max_results: int = 5):
     if cached:
         print(f"⚡ Using cached results for: {query}")
         # Inject per-user "downloaded" flag
-        for result in cached:
-            result["downloaded"] = has_user_downloaded(user_id, result["video_id"])
+        # for result in cached:
+            # result["downloaded"] = has_user_downloaded(user_id, result["video_id"])
         return cached
 
     # Else, fetch fresh results
@@ -94,8 +94,9 @@ def search_youtube(query: str, max_results: int = 5):
             {
                 "title": entry.get("title"),
                 "url": f"https://www.youtube.com/watch?v={vid}",
-                "video_id": vid,
-                "downloaded": has_user_downloaded(user_id, vid),  # only when building fresh
+                "video_id": vid
+                # need below code only in case of redis
+                # "downloaded": has_user_downloaded(user_id, vid),  # only when building fresh
             }
         )
 
@@ -205,10 +206,11 @@ def download_as_mp3(url: str):
     # Analytics and user tracking
     user_id = get_user_id_from_cookie()
     vid = info.get("id")
-    mark_user_downloaded(user_id, vid)
-    log_download_redis(vid)
+    
+    # mark_user_downloaded(user_id, vid)
+    # log_download_redis(vid)
     log_download_db(user_id, vid)
-    update_cached_downloaded_status(vid, user_id)
+    # update_cached_downloaded_status(vid, user_id)
     # update_cached_downloaded_status(vid, user_id)
 
     if not os.path.exists(ai_mp3_path):
