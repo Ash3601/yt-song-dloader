@@ -1,0 +1,60 @@
+<!-- templates/stats.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            padding: 40px;
+        }
+        h2 {
+            color: #00ffcc;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 8px;
+            background-color: #2c2c2c;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #00ffcc;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>📊 Top 10 Searches</h2>
+    <div class="section">
+        <ul>
+            {% for term, count in top_searches %}
+            <li>{{ term }} — {{ count }} searches</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <h2>🎧 Top 10 Downloads</h2>
+    <div class="section">
+        <ul>
+            {% for video_id, count in top_downloads %}
+            <li><a href="https://www.youtube.com/watch?v={{ video_id }}" target="_blank">{{ video_id }}</a> — {{ count }} downloads</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <a href="/" class="back-link">← Back to search</a>
+</body>
+</html>
