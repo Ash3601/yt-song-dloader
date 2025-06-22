@@ -23,7 +23,6 @@ def mark_user_downloaded(user_id, video_id):
     key = f"{USER_KEY_PREFIX}{user_id}"
     r.sadd(key, video_id)
 
-
 import json
 
 def cache_search_results(query, results, ttl=3600):
@@ -72,8 +71,6 @@ def update_cached_downloaded_status(video_id: str, user_id: str):
     pattern = f"{SEARCH_PREFIX}*"
     for key in r.scan_iter(pattern):
         data = r.get(key)
-        print ('Checking inside the redis: ')
-        print ("Data is: ", data)
         if not data:
             continue
         results = json.loads(data)
@@ -82,7 +79,5 @@ def update_cached_downloaded_status(video_id: str, user_id: str):
             if item["video_id"] == video_id:
                 item["downloaded"] = True   # ✅ mark
                 changed = True
-        print ("Value of changed: ", changed)
-        print ("Results got: ", results)
         if changed:
             r.setex(key, 3600, json.dumps(results))
