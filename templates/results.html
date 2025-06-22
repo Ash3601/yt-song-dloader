@@ -1,127 +1,187 @@
-<!-- templates/results.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Search Results - YouTube MP3 Downloader</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #1e1e1e;
-            color: #f0f0f0;
-            margin: 0;
-            padding: 40px;
-        }
-        h2 {
-            color: #00ffcc;
-        }
-        .results-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
-        }
-        .result-card {
-            background-color: #2c2c2c;
-            padding: 20px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .result-title {
-            max-width: 60%;
-        }
-        .btn-group {
-            display: flex;
-            gap: 10px;
-        }
-        button.download-btn, .downloaded-btn, .stream-btn {
-            background-color: #00ffcc;
-            color: #121212;
-            padding: 10px 16px;
-            border-radius: 6px;
-            font-weight: bold;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-        }
-        button.download-btn:hover, .stream-btn:hover {
-            background-color: #00ddaa;
-        }
-        .downloaded-btn {
-            background-color: #555;
-            cursor: not-allowed;
-        }
-        a.back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #00ffcc;
-            text-decoration: none;
-        }
-        #loading {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9999;
-            color: white;
-            font-size: 2em;
-            text-align: center;
-            padding-top: 20%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Search Results - YouTube MP3 Downloader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+      margin: 0;
+      padding: 40px;
+    }
+    h2 {
+      color: #00ffcc;
+    }
+    .results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    .result-card {
+      background-color: #2c2c2c;
+      padding: 20px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-title {
+      max-width: 60%;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    button.download-btn, .downloaded-btn, .stream-btn {
+      background-color: #00ffcc;
+      color: #121212;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+    button.download-btn:hover, .stream-btn:hover {
+      background-color: #00ddaa;
+    }
+    .downloaded-btn {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    a.back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #00ffcc;
+      text-decoration: none;
+    }
+    #loading {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 9999;
+      color: white;
+      font-size: 2em;
+      text-align: center;
+      padding-top: 20%;
+    }
+    .queued-btn {
+      background-color:#888;
+      cursor:wait;
+    }
+  </style>
 </head>
 <body>
-    <h2>Results for: "{{ query }}"</h2>
-    <div class="results-container">
-        {% for result in results %}
-        <div class="result-card">
-            <div class="result-title">{{ result.title }}</div>
-            <div class="btn-group">
-                <a class="stream-btn" href="{{ result.url }}" target="_blank">🎥 Watch</a>
-                {% if result.downloaded %}
-                    <button class="downloaded-btn" disabled>Downloaded</button>
-                {% else %}
-                    <button class="download-btn" onclick="triggerDownload('{{ result.url }}')">Download</button>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
+  <h2>Results for: "{{ query }}"</h2>
+  <div class="results-container">
+    {% for result in results %}
+    <div class="result-card">
+      <div class="result-title">{{ result.title }}</div>
+      <div class="btn-group">
+        <a class="stream-btn" href="{{ result.url }}" target="_blank">🎥 Watch</a>
+        <button class="download-btn"
+                id="btn-{{ result.video_id }}"
+                data-video-id="{{ result.video_id }}"
+                onclick="triggerDownload('{{ result.url }}', '{{ result.video_id }}')">
+          Download
+        </button>
+      </div>
     </div>
-    <a href="/" class="back-link">← Back to search</a>
+    {% endfor %}
+  </div>
+  <a href="/" class="back-link" onclick="return handleBackClick(event)">← Back to search</a>
+  <div id="loading">🎵 Preparing your MP3... Please wait!</div>
 
-    <div id="loading">
-        🎵 Preparing your MP3... Please wait!
-    </div>
+  <script>
+    const queue = [];
+    let isRunning = false;
 
-    <script>
-        function triggerDownload(url) {
-            const form = document.createElement('form');
-            form.method = 'GET';
-            form.action = '/download';
-            form.style.display = 'none';
+    function enqueueDownload(videoUrl, btnEl, vid) {
+      btnEl.classList.add("queued-btn");
+      btnEl.disabled = true;
+      btnEl.textContent = "Queued…";
+      queue.push({ videoUrl, btnEl, vid });
+      runQueue();
+    }
 
-            const input = document.createElement('input');
-            input.name = 'url';
-            input.value = url;
-            form.appendChild(input);
+    async function runQueue() {
+      if (isRunning || queue.length === 0) return;
+      isRunning = true;
+      const { videoUrl, btnEl, vid } = queue.shift();
 
-            document.body.appendChild(form);
-            document.getElementById("loading").style.display = "block";
+      try {
+        btnEl.textContent = "Downloading…";
 
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-            iframe.contentWindow.document.body.appendChild(form);
-            form.submit();
+        const res = await fetch(`/download?url=${encodeURIComponent(videoUrl)}`);
+        if (!res.ok) throw new Error("Download failed");
 
-            setTimeout(() => document.getElementById("loading").style.display = "none", 15000);
+        const blob = await res.blob();
+        const cd = res.headers.get("Content-Disposition") || '';
+        const match = /filename="(.+?)"/.exec(cd);
+        const fname = match ? match[1] : "download.mp3";
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fname;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        btnEl.className = "downloaded-btn";
+        btnEl.textContent = "Downloaded";
+
+        // ✅ Update localStorage
+        let dls = JSON.parse(localStorage.getItem("downloaded") || "[]");
+        if (!dls.includes(vid)) {
+          dls.push(vid);
+          localStorage.setItem("downloaded", JSON.stringify(dls));
         }
-    </script>
+
+      } catch (err) {
+        alert("❌ " + err.message);
+        btnEl.className = "download-btn";
+        btnEl.textContent = "Retry";
+        btnEl.disabled = false;
+      } finally {
+        isRunning = false;
+        runQueue();
+      }
+    }
+
+    function triggerDownload(url, vid) {
+      const btn = event.currentTarget;
+      enqueueDownload(url, btn, vid);
+    }
+
+    function handleBackClick(event) {
+      if (queue.length > 0 || isRunning) {
+        alert("🎧 Please wait until downloads in queue are finished.");
+        event.preventDefault();
+        return false;
+      }
+      return true;
+    }
+
+    // ✅ On page load, flip previously downloaded buttons
+    window.addEventListener("DOMContentLoaded", () => {
+      const downloaded = JSON.parse(localStorage.getItem("downloaded") || "[]");
+      downloaded.forEach(vid => {
+        const btn = document.getElementById("btn-" + vid);
+        if (btn) {
+          btn.className = "downloaded-btn";
+          btn.textContent = "Downloaded";
+          btn.disabled = true;
+        }
+      });
+    });
+  </script>
 </body>
 </html>

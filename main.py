@@ -15,6 +15,7 @@ from cache_util import (
     mark_user_downloaded,
     get_cached_search_results,
     cache_search_results,
+    update_cached_downloaded_status,
 )
 from analytics_redis import (
     log_search_redis,
@@ -34,12 +35,49 @@ app.secret_key = "your‑secret‑key"  # mandatory for session
 # -----------------------------------------------------------------------------
 # helper: search YouTube (via yt‑dlp) and flag per‑user downloaded items
 # -----------------------------------------------------------------------------
+# def search_youtube(query: str, max_results: int = 5):
+#     cached = get_cached_search_results(query)
+#     if cached:
+#         print(f"⚡ Using cached results for: {query}")
+#         return cached
+
+#     opts = {
+#         "quiet": True,
+#         "skip_download": True,
+#         "extract_flat": True,
+#         "force_generic_extractor": True,
+#     }
+#     with yt_dlp.YoutubeDL(opts) as ydl:
+#         info = ydl.extract_info(f"ytsearch{max_results}:{query}", download=False)
+
+#     user_id = get_user_id_from_cookie()
+#     results = []
+#     for entry in info.get("entries", []):
+#         vid = entry.get("id")
+#         results.append(
+#             {
+#                 "title": entry.get("title"),
+#                 "url": f"https://www.youtube.com/watch?v={vid}",
+#                 "video_id": vid,
+#                 "downloaded": has_user_downloaded(user_id, vid),
+#             }
+#         )
+
+#     cache_search_results(query, results)
+#     return results
+
 def search_youtube(query: str, max_results: int = 5):
     cached = get_cached_search_results(query)
+    user_id = get_user_id_from_cookie()
+
     if cached:
         print(f"⚡ Using cached results for: {query}")
+        # Inject per-user "downloaded" flag
+        for result in cached:
+            result["downloaded"] = has_user_downloaded(user_id, result["video_id"])
         return cached
 
+    # Else, fetch fresh results
     opts = {
         "quiet": True,
         "skip_download": True,
@@ -49,7 +87,6 @@ def search_youtube(query: str, max_results: int = 5):
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(f"ytsearch{max_results}:{query}", download=False)
 
-    user_id = get_user_id_from_cookie()
     results = []
     for entry in info.get("entries", []):
         vid = entry.get("id")
@@ -58,12 +95,22 @@ def search_youtube(query: str, max_results: int = 5):
                 "title": entry.get("title"),
                 "url": f"https://www.youtube.com/watch?v={vid}",
                 "video_id": vid,
-                "downloaded": has_user_downloaded(user_id, vid),
+                "downloaded": has_user_downloaded(user_id, vid),  # only when building fresh
             }
         )
 
-    cache_search_results(query, results)
+    # Cache it WITHOUT the downloaded flag (user-specific)
+    cache_search_results(query, [
+        {
+            "title": r["title"],
+            "url": r["url"],
+            "video_id": r["video_id"],
+        } for r in results
+    ])
+
     return results
+
+
 
 # -----------------------------------------------------------------------------
 # helper: download & convert to MP3, then log
@@ -133,18 +180,19 @@ def download_as_mp3(url: str):
             "and no emojis or slang. Output only the title.\n\n"
             f"Input: '{original_title}'"
         )
-        response = ollama.chat(
-            model='llama2',
-            messages=[{"role": "user", "content": ai_prompt}]
-        )
-        ai_title = response['message']['content'].strip()
-        print("AI Title from LLaMA2:", ai_title)
+        # response = ollama.chat(
+        #     model='llama2',
+        #     messages=[{"role": "user", "content": ai_prompt}]
+        # )
+        # ai_title = response['message']['content'].strip()
+        # print("AI Title from LLaMA2:", ai_title)
 
         # Clean filename: remove unsafe characters
         # Remove "Output:" or similar prefixes if present
-        ai_title = re.sub(r'^(Output\s*:\s*)', '', ai_title, flags=re.IGNORECASE).strip()        
+        # ai_title = re.sub(r'^(Output\s*:\s*)', '', ai_title, flags=re.IGNORECASE).strip()        
 
-        ai_title = re.sub(r'[<>:"/\\|?*]', '', ai_title)
+        # ai_title = re.sub(r'[<>:"/\\|?*]', '', ai_title)
+        ai_title = original_title
         print("Final AI title after regex:", ai_title)
         ai_mp3_path = os.path.join(tmp_dir, ai_title + ".mp3")
 
@@ -160,6 +208,8 @@ def download_as_mp3(url: str):
     mark_user_downloaded(user_id, vid)
     log_download_redis(vid)
     log_download_db(user_id, vid)
+    update_cached_downloaded_status(vid, user_id)
+    # update_cached_downloaded_status(vid, user_id)
 
     if not os.path.exists(ai_mp3_path):
         raise FileNotFoundError("MP3 conversion failed")
@@ -198,11 +248,11 @@ def results():
 def download():
     url = request.args.get("url")
     try:
-        mp3 = download_as_mp3(url)
-        return send_file(mp3, as_attachment=True)
+        mp3_path = download_as_mp3(url)
+        filename = os.path.basename(mp3_path)
+        return send_file(mp3_path, as_attachment=True, download_name=filename, mimetype='audio/mpeg')
     except Exception as exc:
         return f"❌ Error: {exc}", 500
-
 
 @app.route("/stats")
 def stats():
